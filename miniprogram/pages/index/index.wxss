@@ -151,3 +151,28 @@ page {
   line-height: 36rpx;
   word-break: break-all;
 }
+
+.canvas {
+  background: #fff;
+  width: 600rpx;
+  height: 900rpx;
+  margin-top: 20rpx;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rubber {
+  display: flex;
+  background: orange;
+  width: 200rpx;
+  height: 100rpx;
+  margin-top: 40rpx;
+  margin-left: auto;
+  margin-right: auto;
+  justify-content: center;
+  align-items: center;
+}
+
+.change {
+  background: #fff;
+}

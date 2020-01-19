@@ -1,19 +1,22 @@
 //index.js
 const app = getApp()
-
+var pencilTrack = new Array()
 Page({
   data: {
     avatarUrl: './user-unlogin.png',
     userInfo: {},
     logged: false,
     takeSession: false,
-    requestResult: ''
+    requestResult: '',
+    isClear: false
   },
 
   onLoad: function() {
+    // 获取画布上下文
+    this.context = wx.createCanvasContext('my-canvas');  // 参数必须和canvas组件中canvas-id值相同
     if (!wx.cloud) {
       wx.redirectTo({
-        url: '../chooseLib/chooseLib',
+        
       })
       return
     }
@@ -33,6 +36,10 @@ Page({
           })
         }
       }
+    })
+
+    wx.showShareMenu({
+      withShareTicket: true
     })
   },
 
@@ -66,55 +73,72 @@ Page({
       }
     })
   },
+  // 刚开始触摸
+  touchStart(e) {
+    // 获取触摸点坐标
+    this.startX = e.changedTouches[0].x
+    this.startY = e.changedTouches[0].y
 
-  // 上传图片
-  doUpload: function () {
-    // 选择图片
-    wx.chooseImage({
-      count: 1,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: function (res) {
+    // 画笔配置
+    this.context.setStrokeStyle('red');  // 颜色 
+    this.context.setLineWidth(5);        // 粗细 
+    this.context.setLineCap('round');    // 线头形状
+    this.context.setLineJoin('round');   // 交叉处形状
+  },
 
-        wx.showLoading({
-          title: '上传中',
-        })
+  // 开始移动
+  touchMove(e) {
+    // 移动时坐标
+    var moveX = e.changedTouches[0].x
+    var moveY = e.changedTouches[0].y
 
-        const filePath = res.tempFilePaths[0]
-        
-        // 上传图片
-        const cloudPath = 'my-image' + filePath.match(/\.[^.]+?$/)[0]
-        wx.cloud.uploadFile({
-          cloudPath,
-          filePath,
-          success: res => {
-            console.log('[上传文件] 成功：', res)
+    // 判断是否是橡皮檫
+    if (this.data.isClear) {
+      // 是
+      // 以当前坐标点为中心创建20*20像素的橡皮檫
+      let rectOriX = this.startX - 10;
+      let rectOriY = this.startY - 10;
+      this.context.clearRect(rectOriX, rectOriY, 20, 20);
+    } else {
+      // 不是
+      this.context.moveTo(this.startX, this.startY);  // 找到起点
+      this.context.lineTo(moveX, moveY);              // 找到终点
+      this.context.stroke();                          // 描绘路径
+      
+      pencilTrack.push(moveX);
+      pencilTrack.push(moveY);
+    }
 
-            app.globalData.fileID = res.fileID
-            app.globalData.cloudPath = cloudPath
-            app.globalData.imagePath = filePath
-            
-            wx.navigateTo({
-              url: '../storageConsole/storageConsole'
-            })
-          },
-          fail: e => {
-            console.error('[上传文件] 失败：', e)
-            wx.showToast({
-              icon: 'none',
-              title: '上传失败',
-            })
-          },
-          complete: () => {
-            wx.hideLoading()
-          }
-        })
+    // 改变起点坐标
+    this.startX = moveX;
+    this.startY = moveY;
+    this.context.draw(true);  // 画
+  },
+  touchEnd(){
+    console.log("pencilTrack:" + pencilTrack)
+    pencilTrack = [];
+  },
 
-      },
-      fail: e => {
-        console.error(e)
-      }
+  // 橡皮檫
+  clear() {
+    // 每次点击都变成相反的状态
+    this.setData({
+      isClear: !this.data.isClear
     })
   },
+
+  onGetOpenid(){
+    wx.cloud.callFunction({
+      // 云函数名称
+      name: 'datasync',
+      // 传给云函数的参数
+      data: {
+      },
+      success: function (res) {
+        console.log(res)
+      },
+      fail: console.error
+    })
+  }
 
 })
